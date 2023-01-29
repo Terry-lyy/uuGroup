@@ -55,7 +55,8 @@ public class ParticipantsController {
 
 //	新增好友群組
 	@PostMapping(path = "/participants/friendadd", produces = "application/json; charset=UTF-8")
-	public void inserParticipants(@RequestParam(name="userId") Integer userId, @RequestParam(name="fuid") Integer fuid) {
+	public void inserParticipants(@RequestParam(name = "userId") Integer userId,
+			@RequestParam(name = "fuid") Integer fuid) {
 		System.out.println("userId" + userId + "fuid" + fuid);
 		GroupRoom gr = groupRoomService.insertGroupRoom(null, 0, null);
 		Integer grId = gr.getGroupId();
@@ -73,8 +74,6 @@ public class ParticipantsController {
 
 		return gList;
 	}
-
-	
 
 	// 搜尋誰傳的訊息 自己是哪個群組 群組名
 	@GetMapping(path = "/participants/select1", produces = { "application/json;charset=UTF-8" })
@@ -112,7 +111,7 @@ public class ParticipantsController {
 	}
 
 	// 已讀
-	
+
 	@PostMapping("/msg/ifRead")
 	@ResponseBody
 	public String readMessage(@RequestParam Integer groupId, HttpSession session) {
@@ -120,43 +119,53 @@ public class ParticipantsController {
 		List<Participants> pList = participantsService.findGroupId(groupId);
 		MemberTest member = (MemberTest) session.getAttribute("loginUser");
 		Integer userId = member.getId();
+		String user=String.valueOf(userId);
 		Set<String> ifRead = new HashSet<String>();
-		System.out.println("userId"+userId);
+		System.out.println("userId" + userId);
 		for (MessageContent mes : mesList) {
-			System.out.println("getIfRead"+mes.getIfRead());
-			System.out.println("senderId"+mes.getSenderId());
-			if(mes.getIfRead() == null && mes.getSenderId()==userId) {
+			System.out.println("getIfRead" + mes.getIfRead());
+			System.out.println("senderId" + mes.getSenderId());
+			// 如果傳送訊息等於自己略過
+			if (userId.equals(mes.getSenderId())) {
+				System.out.println("userId=================" + userId);
+				System.out.println("userId=================" + mes.getSenderId());
 				continue;
 			}
-			if (mes.getIfRead() == null && mes.getSenderId()!=userId) {
-				
+			// 如果訊息已讀為空加入ID
+			if (mes.getIfRead() == null) {
+
 //				ifRead.add(String.valueOf(userId));
-				messageService.readMessage(String.valueOf(userId),groupId,userId);
+				messageService.readMessage(String.valueOf(userId), groupId, userId);
 				continue;
 //				MessageService.readMessage()
-			}else {
+			} else {
+				if (userId.equals(mes.getSenderId())) {
+					continue;
+				}
 				String ifReadStr = mes.getIfRead();
 				String[] ifReadSplit = ifReadStr.split(",");
-				System.out.println("ifReadStr"+ifReadStr);
-				System.out.println("ifReadSplit"+ifReadSplit);
-				System.out.println(pList.size() - 1);
-				System.out.println(ifReadSplit.length);
-				
+
+				// 如果群組人數等於已讀人數，就不走資料庫
 				if (pList.size() - 1 > ifReadSplit.length) {
+
 					for (int i = 0; i < ifReadSplit.length; i++) {
-						System.out.println("ifReadSplit[i]"+ifReadSplit[i]);
-						String j = ifReadSplit[i];
-						ifRead.add(j);
+						
+						ifRead.add(ifReadSplit[i]);
+
 					}
+					// 如果他沒有讀就加ID
 					if (ifRead.contains(String.valueOf(userId)) == false) {
 						ifRead.add(String.valueOf(userId));
+						
 						String[] array = ifRead.stream().toArray(String[]::new);
 						String ifReadString = Arrays.toString(array);
-//						String ifReadString=StringUtils.join(ifRead.toArray(),",");
 						messageService.readMessage(ifReadString, groupId, userId);
+						ifRead.clear();
 						continue;
 					}
-					
+
+				} else {
+					continue;
 				}
 
 			}
@@ -268,6 +277,5 @@ public class ParticipantsController {
 		System.out.println(customerServiceMessageService.findLikeMessage(text));
 		return customerServiceMessageService.findLikeMessage(text);
 	}
-
 
 }
